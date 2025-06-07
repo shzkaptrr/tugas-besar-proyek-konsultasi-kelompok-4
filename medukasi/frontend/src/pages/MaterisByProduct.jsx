@@ -49,7 +49,16 @@ const MaterisByProduct = () => {
             }
 
             const data = await response.json();
-            setMateris(data.data);
+            // Hitung progress di sini:
+            const materisWithProgress = data.data.map(materi => {
+              if (!materi.sub_materis || materi.sub_materis.length === 0) {
+                return { ...materi, progress: 0 };
+              }
+              const jumlahDilihat = materi.sub_materis.filter(sub => sub.user_status?.status === 'lihat').length;
+              const progress = Math.round((jumlahDilihat / materi.sub_materis.length) * 100);
+              return { ...materi, progress };
+            });
+            setMateris(materisWithProgress);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -113,10 +122,15 @@ return (
           
           {/* Isi materi */}
           <div className="bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 transform">
-            <h3 className="text-xl font-semibold text-white mb-3 flex items-center">
-              <BookOpen size={28} className="mr-3 text-white" />
-              Materi {materi.urutan}: {materi.nama_materi}
-            </h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-xl font-semibold text-white flex items-center">
+                <BookOpen size={28} className="mr-3 text-white" />
+                Materi {materi.urutan}: {materi.nama_materi}
+              </h3>
+              <div className="text-sm text-white/80 bg-white/10 px-3 py-1 rounded-full border border-white/30 shadow-sm">
+                Progress: {materi.progress ?? 0}%
+              </div>
+            </div>
             <p className="text-white/80 text-base mb-4 italic">
               {materi.deskripsi || 'Tidak ada deskripsi untuk materi ini.'}
             </p>
@@ -137,13 +151,21 @@ return (
                         {getIconForTipeMateri(subMateri.tipe_materi)}
                       </div>
                       <div className="flex-grow text-gray-800">
-                        <h5 className="text-md font-medium">
-                          {subMateri.judul_sub_materi}
-                          <span className="ml-2 px-2 py-0.5 text-xs font-medium text-purple-700 bg-purple-100 rounded-full capitalize">
-                            {subMateri.tipe_materi.replace('_', ' ')}
+                        <div className="flex justify-between items-start">
+                          <h5 className="text-md font-medium flex items-center">
+                            {subMateri.judul_sub_materi}
+                            <span className="ml-2 px-2 py-0.5 text-xs font-medium text-purple-700 bg-purple-100 rounded-full capitalize">
+                              {subMateri.tipe_materi.replace('_', ' ')}
+                            </span>
+                          </h5>
+                          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                            (subMateri.user_status?.status === 'lihat')
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {subMateri.user_status?.status}
                           </span>
-                        </h5>
-
+                        </div>
                         {subMateri.durasi && subMateri.tipe_materi === 'video' && (
                           <p className="text-gray-500 text-xs flex items-center mb-1">
                             <Clock size={14} className="mr-1" />

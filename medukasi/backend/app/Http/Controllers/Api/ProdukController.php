@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Produk;
 use Illuminate\Http\Response;
+use App\Models\Materi;
 
 class ProdukController extends Controller
 {
@@ -77,4 +78,29 @@ class ProdukController extends Controller
 
         return response()->json(['message' => 'Produk berhasil dihapus'], Response::HTTP_OK);
     }
+
+    public function getMaterisByProduk($produkId)
+{
+    $materis = Materi::with(['subMateris.userStatus'])
+        ->where('produk_id', $produkId)
+        ->orderBy('urutan')
+        ->get();
+
+    $materis->each(function ($materi) {
+        $materi->sub_materis->each(function ($sub) {
+            // Paksa accessor agar default muncul
+            $sub->setRelation('user_status', $sub->user_status);
+            $sub->unsetRelation('userStatus');
+        });
+    });
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Materis for product retrieved successfully',
+        'data' => $materis
+    ]);
+}
+
+
+
 }

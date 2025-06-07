@@ -209,62 +209,63 @@ class MateriController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function getByProdukId($produk_id)
-    {
-        $user = Auth::user(); // Dapatkan user yang sedang login
+{
+    $user = Auth::user(); // Dapatkan user yang sedang login
 
-        // Pastikan user terautentikasi
-        if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
-        }
+    // Pastikan user terautentikasi
+    if (!$user) {
+        return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+    }
 
-        // Cek apakah produk_id itu sendiri ada di database
-        $produk = Produk::find($produk_id);
-        if (!$produk) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Produk not found'
-            ], 404);
-        }
+    // Cek apakah produk_id itu sendiri ada di database
+    $produk = Produk::find($produk_id);
+    if (!$produk) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Produk not found'
+        ], 404);
+    }
 
-        // --- LOGIKA CEK AKSES PRODUK UNTUK USER INI ---
-        // Periksa apakah user yang sedang login memiliki pendaftaran untuk produk ini
-        // DAN status pembayaran pendaftaran tersebut sudah 'konfirmasi'.
-        $hasAccess = Pendaftaran::where('user_id', $user->user_id)
-                                ->where('produk_id', $produk_id)
-                                ->whereHas('pembayaran', function ($query) {
-                                    // Cek apakah ada pembayaran terkait yang sudah 'konfirmasi'
-                                    $query->where('status_konfirmasi', 'sukses'); // <--- SESUAIKAN DENGAN NILAI ENUM 'PAID' ANDA
-                                })
-                                ->exists();
+    // --- LOGIKA CEK AKSES PRODUK UNTUK USER INI ---
+    // Periksa apakah user yang sedang login memiliki pendaftaran untuk produk ini
+    // DAN status pembayaran pendaftaran tersebut sudah 'konfirmasi'.
+    $hasAccess = Pendaftaran::where('user_id', $user->user_id)
+                            ->where('produk_id', $produk_id)
+                            ->whereHas('pembayaran', function ($query) {
+                                $query->where('status_konfirmasi', 'sukses'); // Sesuaikan enum status
+                            })
+                            ->exists();
 
-        // Jika user tidak memiliki akses, kembalikan error 403 Forbidden
-        if (!$hasAccess) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Anda belum memiliki akses ke produk ini atau pembayaran belum dikonfirmasi.'
-            ], 403);
-        }
-        // --- END LOGIKA CEK AKSES PRODUK UNTUK USER INI ---
+    if (!$hasAccess) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Anda belum memiliki akses ke produk ini atau pembayaran belum dikonfirmasi.'
+        ], 403);
+    }
+    // --- END LOGIKA CEK AKSES ---
 
-        // Jika user memiliki akses, ambil semua materi (beserta sub-materinya) untuk produk ini
-        $materis = Materi::where('produk_id', $produk_id)
-                         ->with('subMateris') // Eager load subMateris untuk setiap materi
-                         ->orderBy('urutan')
-                         ->get();
+    // Ambil semua materi beserta subMateris dan userStatus yang sesuai user_id login
+    $materis = Materi::where('produk_id', $produk_id)
+        ->with(['subMateris' => function ($q) {
+            $q->with(['userStatus' => function ($query) {
+                $query->where('user_id', Auth::id());
+            }]);
+        }])
+        ->orderBy('urutan')
+        ->get();
 
-        // Cek jika tidak ada materi untuk produk ini (meskipun user punya akses ke produknya)
-        if ($materis->isEmpty()) {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Tidak ada materi ditemukan untuk produk ini.',
-                'data' => []
-            ], 200);
-        }
-
+    if ($materis->isEmpty()) {
         return response()->json([
             'status' => 'success',
-            'message' => 'Materis for product retrieved successfully',
-            'data' => $materis
+            'message' => 'Tidak ada materi ditemukan untuk produk ini.',
+            'data' => []
         ], 200);
     }
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Materis for product retrieved successfully',
+        'data' => $materis
+    ], 200);
+}
 }

@@ -8,6 +8,7 @@ use App\Http\Controllers\PendaftaranController; // Ini sudah benar
 use App\Http\Controllers\PembayaranController; // Ini sudah benar
 use App\Http\Controllers\Api\MateriController;
 use App\Http\Controllers\Api\SubMateriController;
+use App\Http\Controllers\SubMateriStatusController;
 
 // Route yang sudah ada
 Route::get('/user', function (Request $request) {
@@ -67,4 +68,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- Rute Baru untuk mengambil produk yang dibeli user ---
     Route::get('my-products', [PendaftaranController::class, 'getMyPurchasedProducts']); // <--- TAMBAHKAN BARIS INI
 
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::put('/sub-materi/{id}/lihat', [SubMateriStatusController::class, 'lihat']);
+        Route::get('/materi/{id}/sub-materi', [SubMateriStatusController::class, 'list']);
+    });
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/produk/{produkId}/materis', [ProdukController::class, 'getMaterisByProduk']);
+    });
 });
