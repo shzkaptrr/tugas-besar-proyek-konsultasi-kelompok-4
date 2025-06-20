@@ -49,30 +49,49 @@ class PendaftaranController extends Controller
 
         return response()->json($pendaftaran);
     }
-    // app/Http/Controllers/PendaftaranController.php
+    
+    // API endpoint untuk mendapatkan semua pendaftaran (untuk admin)
+    public function getAllPendaftaran()
+    {
+        // Log the current user accessing the admin dashboard
+        $user = auth()->user();
+        \Log::info('Admin dashboard accessed by user:', [
+            'user_id' => $user->id,
+            'name' => $user->nama_lengkap ?? $user->name ?? 'Unknown',
+            'email' => $user->email,
+            'role' => $user->role ?? 'Unknown'
+        ]);
 
-public function getMyPurchasedProducts()
-{
-    $user = Auth::user();
-
-    if (!$user) {
-        return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        $pendaftaran = Pendaftaran::with(['user', 'produk'])->get();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $pendaftaran
+        ]);
     }
 
-    $loggedInUserId = $user->user_id; // Pastikan ini sudah $user->user_id
+    // app/Http/Controllers/PendaftaranController.php
+    public function getMyPurchasedProducts()
+    {
+        $user = Auth::user();
 
-    $purchasedProducts = Pendaftaran::where('user_id', $loggedInUserId) // Pastikan ini $user->user_id
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $loggedInUserId = $user->user_id; // Pastikan ini sudah $user->user_id
+
+        $purchasedProducts = Pendaftaran::where('user_id', $loggedInUserId) // Pastikan ini $user->user_id
                                 ->whereHas('pembayaran', function ($query) {
                                     $query->where('status_konfirmasi', 'sukses');
                                 })
                                 ->with(['produk', 'pembayaran']) // <--- TAMBAHKAN 'pembayaran' DI SINI
                                 ->get();
 
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Purchased products retrieved successfully',
-        'data' => $purchasedProducts
-    ], 200);
-}
-
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Purchased products retrieved successfully',
+            'data' => $purchasedProducts
+        ], 200);
+    }
 }

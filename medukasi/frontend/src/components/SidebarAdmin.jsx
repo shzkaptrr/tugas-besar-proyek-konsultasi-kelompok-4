@@ -1,27 +1,53 @@
 import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo_medukasi.png';
 
 
 const SidebarAdmin = ({ activeMenu, setActiveMenu }) => {
+  const navigate = useNavigate();
+  
   // Daftar menu dengan ikon sesuai desain awal
   const menuItems = [
     {
       name: 'Jumlah Pendaftar',
       icon: (
         <svg className="w-5 h-5 text-[#6B5B8E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20h6M3 20h5v-2a4 4 0 00-3-3.87M16 4a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
-      )
+      ), // Ikon user-group
+      type: 'menu'
     },
     {
       name: 'Konfirmasi Pembayaran',
       icon: (
         <svg className="w-5 h-5 text-[#6B5B8E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-      )
+      ), // Ikon check-circle / verifikasi
+      type: 'menu'
+    },
+    {
+      name: 'Register Admin Tutor',
+      icon: (
+        <svg className="w-5 h-5 text-[#6B5B8E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-1.414 1.414a2 2 0 01-2.828 0l-1.414-1.414m5.656 0a2 2 0 010 2.828L12 14l-4 1 1-4 6.364-6.364a2 2 0 012.828 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11l4 4m-6 2H5a2 2 0 01-2-2V5a2 2 0 012-2h7" />
+        </svg>
+      ), // Ikon edit-user / tambah admin
+      type: 'link',
+      path: '/register-admin-tutor'
     }
+    
   ];
+  
+  // Function to handle menu item click
+  const handleMenuItemClick = (item) => {
+    if (item.type === 'menu') {
+      setActiveMenu(item.name);
+    } else if (item.type === 'link') {
+      navigate(item.path);
+    }
+  };
   
   return (
 <div className="h-full bg-gradient-to-b from-pink-100 to-indigo-100 p-4 shadow-xl flex flex-col">
@@ -40,9 +66,9 @@ const SidebarAdmin = ({ activeMenu, setActiveMenu }) => {
             <div 
               key={item.name}
               className={`group transition-colors cursor-pointer rounded-lg ${
-                activeMenu === item.name ? 'bg-[#E7DEEE]' : 'hover:bg-[#E7DEEE]'
+                item.type === 'menu' && activeMenu === item.name ? 'bg-[#E7DEEE]' : 'hover:bg-[#E7DEEE]'
               }`}
-              onClick={() => setActiveMenu(item.name)}
+              onClick={() => handleMenuItemClick(item)}
             >
               <div className="flex items-center gap-3 p-3">
                 {item.icon}

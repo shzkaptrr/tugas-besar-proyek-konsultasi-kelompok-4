@@ -11,6 +11,7 @@ import DashboardPimpinan from './pages/DashboardPimpinan';
 import DashboardAdmin from './pages/DashboardAdmin';
 import DashboardStudent from './pages/DashboardStudent';
 import DashboardManager from './pages/DashboardManager';
+import DashboardTutor from './pages/DashboardTutor'; // Import komponen DashboardTutor
 import ClassAfterBuy from './pages/MyClassAfterBuy';
 import ClassBeforeBuy from './pages/MyClassBeforeBuy';
 import StaticMonitoring from './pages/StatisticMonitoring';
@@ -27,7 +28,7 @@ import RegisterAdminTutor from "./pages/RegisterAdminTutor";
  
 import MaterisPage from './pages/MaterisPage';
 import MyPurchasedProducts from './pages/MyPurchasedProducts';
-import MaterisByProduct from './pages/MaterisByProduct';    
+import MaterisByProduct from './pages/MaterisByProduct';
 
 
 // Komponen Wrapper untuk MaterisByProduct (mirip MateriPageWrapper sebelumnya)
@@ -75,10 +76,10 @@ const App = () => {
         <Route path="/dashboard-pimpinan" element={<ProtectedRoute><DashboardPimpinan /></ProtectedRoute>} />
         <Route path="/dashboard-admin" element={<ProtectedRoute><DashboardAdmin /></ProtectedRoute>} />
         <Route path="/dashboard-manager" element={<ProtectedRoute><DashboardManager /></ProtectedRoute>} />
+        <Route path="/dashboard-tutor" element={<ProtectedRoute><DashboardTutor /></ProtectedRoute>} /> {/* Tambah route untuk dashboard tutor */}
         <Route path="/dashboard-student" element={<ProtectedRoute><DashboardStudent /></ProtectedRoute>} />
         <Route path="/payment-status" element={<ProtectedRoute><PaymentStatus /></ProtectedRoute>} />
         {/* Hapus path="/pendaftaran" jika sudah ada di atas */}
-        {/* <Route path="/pendaftaran" element={<ProtectedRoute><Pendaftaran /></ProtectedRoute>} /> */}
         <Route path="/detail-materi" element={<ProtectedRoute><DetailMateri /></ProtectedRoute>} /> {/* Jika DetailMateri ini berbeda dengan MateriDetailPage */}
         <Route path="/statistic-monitoring" element={<ProtectedRoute><StaticMonitoring /></ProtectedRoute>} />
         <Route path="/register-admin-tutor" element={<ProtectedRoute><RegisterAdminTutor /></ProtectedRoute>} />

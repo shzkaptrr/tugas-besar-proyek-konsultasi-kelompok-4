@@ -5,14 +5,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import profileImg from '../assets/login/avatar.jpg';
 import searchIcon from '../assets/class/search.png';
-import class1 from '../assets/class/kelas1.png';
-import class2 from '../assets/class/kelas2.png';
-import class3 from '../assets/class/kelas3.png';
 
 export default function DashboardStudent() {
   const [searchInput, setSearchInput] = useState('');
-  const [viewInputs, setViewInputs] = useState(['', '', '']);
   const [user, setUser] = useState(null);
+  const [purchasedProducts, setPurchasedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,34 +20,64 @@ export default function DashboardStudent() {
       navigate("/login"); // redirect kalau belum login
     } else {
       setUser(storedUser);
+      // Fetch produk yang sudah dibeli
+      fetchPurchasedProducts();
     }
   }, []);
 
-  const classData = [
-    {
-      id: 1,
-      title: "Private Class",
-      description: "Layanan bimbingan personal untuk pembelajaran intensif",
-      image: class1
-    },
-    {
-      id: 2,
-      title: "Group Class",
-      description: "Belajar bersama dalam kelompok kecil yang interaktif",
-      image: class2
-    },
-    {
-      id: 3,
-      title: "Premium Class",
-      description: "Pengalaman belajar eksklusif dengan fasilitas terbaik",
-      image: class3
-    }
-  ];
+  // Fungsi untuk mengambil daftar produk yang telah dibeli
+  const fetchPurchasedProducts = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        throw new Error("Token not found");
+      }
 
-  const handleViewInput = (index, value) => {
-    const newInputs = [...viewInputs];
-    newInputs[index] = value;
-    setViewInputs(newInputs);
+      console.log('🔍 Fetching purchased products...');
+      
+      const response = await fetch("http://localhost:8000/api/my-products", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch purchased products");
+      }
+
+      const result = await response.json();
+      console.log('✅ Purchased products fetched successfully:', result);
+      
+      // Ekstrak array pendaftaran dari respons API
+      if (result.data && Array.isArray(result.data)) {
+        console.log('📋 Found', result.data.length, 'purchased products');
+        setPurchasedProducts(result.data);
+      } else {
+        console.warn('⚠️ Unexpected API response structure:', result);
+        setPurchasedProducts([]);
+      }
+    } catch (err) {
+      console.error('❌ Error fetching purchased products:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fungsi untuk memformat harga
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(price);
+  };
+
+  // Fungsi untuk mengarahkan ke halaman materi
+  const navigateToMaterials = (productId) => {
+    navigate(`/my-products/${productId}/materials`);
   };
 
   return (
@@ -78,7 +107,7 @@ export default function DashboardStudent() {
 
           {/* Search Section */}
           <section className="flex justify-between items-center mb-8 px-6">
-            <h3 className="text-2xl font-bold text-gray-900">Status Kelas</h3>
+            <h3 className="text-2xl font-bold text-gray-900">Daftar Kelas</h3>
             <div className="flex items-center bg-gray-100 px-4 py-2 rounded-lg">
               <img src={searchIcon} alt="Cari" className="w-4 h-4 mr-2" />
               <input
@@ -91,30 +120,79 @@ export default function DashboardStudent() {
             </div>
           </section>
 
-          {/* Class Cards */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-6 px-6">
-            {classData.map((classItem, index) => (
-              <div
-                key={classItem.id}
-                className="bg-gradient-to-b from-red-400 to-indigo-900 rounded-xl p-6 text-white"
+          {/* Loading dan Error States */}
+          {loading && (
+            <div className="flex justify-center items-center py-12">
+              <div className="spinner w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 mx-6 rounded">
+              <p>{error}</p>
+              <button 
+                className="text-blue-600 underline mt-2"
+                onClick={fetchPurchasedProducts}
               >
-                <div className="flex flex-col items-center mb-4">
-                  <div className="bg-white p-1 rounded-md w-full mb-3">
-                    <img src={classItem.image} alt={classItem.title} className="w-full h-14 object-contain" />
-                  </div>
-                  <h4 className="text-lg font-bold">{classItem.title}</h4>
+                Coba lagi
+              </button>
+            </div>
+          )}
+
+          {/* Class Cards - Purchased Products */}
+          {!loading && !error && (
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-6 px-6">
+              {purchasedProducts.length === 0 ? (
+                <div className="col-span-3 text-center py-12">
+                  <p className="text-gray-600 mb-4">Belum ada kelas yang dibeli</p>
+                  <Link 
+                    to="/products" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-xl transition-colors"
+                  >
+                    Jelajahi Kelas
+                  </Link>
                 </div>
-                <p className="text-center mb-6">{classItem.description}</p>
-                <input
-                  type="button"
-                  value={viewInputs[index] || "Lihat"}
-                  onChange={(e) => handleViewInput(index, e.target.value)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-xl cursor-pointer transition-colors"
-                />
-              </div>
-            ))}
-          </section>
-        
+              ) : (
+                purchasedProducts
+                  .filter(pendaftaran => 
+                    pendaftaran.produk && pendaftaran.produk.nama_produk &&
+                    pendaftaran.produk.nama_produk.toLowerCase().includes(searchInput.toLowerCase())
+                  )
+                  .map((pendaftaran) => {
+                    // Pastikan produk tersedia
+                    if (!pendaftaran.produk) return null;
+                    
+                    const product = pendaftaran.produk;
+                    
+                    return (
+                      <div
+                        key={pendaftaran.pendaftaran_id}
+                        className="bg-gradient-to-b from-red-400 to-indigo-900 rounded-xl p-6 text-white"
+                      >
+                        <div className="flex flex-col items-center mb-4">
+                         
+                          <h4 className="text-lg font-bold">{product.nama_produk}</h4>
+                        </div>
+                        <div className="text-center mb-3">
+                          <span className="bg-blue-700 text-white text-xs px-2 py-1 rounded-full">
+                            {formatPrice(product.harga)}
+                          </span>
+                        </div>
+                        <p className="text-center mb-6 h-12 overflow-hidden">
+                          {product.deskripsi_produk || product.deskripsi || "Kelas ini mencakup berbagai materi pembelajaran yang komprehensif"}
+                        </p>
+                        <button
+                          onClick={() => navigateToMaterials(product.produk_id)}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-xl cursor-pointer transition-colors"
+                        >
+                          Lihat Materi
+                        </button>
+                      </div>
+                    );
+                  })
+              )}
+            </section>
+          )}
       </main>
     </div>
   );

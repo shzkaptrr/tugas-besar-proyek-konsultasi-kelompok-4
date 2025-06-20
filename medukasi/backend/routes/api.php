@@ -9,6 +9,7 @@ use App\Http\Controllers\PembayaranController; // Ini sudah benar
 use App\Http\Controllers\Api\MateriController;
 use App\Http\Controllers\Api\SubMateriController;
 use App\Http\Controllers\SubMateriStatusController;
+use App\Http\Controllers\Api\TutorController; // Import TutorController
 
 // Route yang sudah ada
 Route::get('/user', function (Request $request) {
@@ -28,52 +29,59 @@ Route::get('/test-connection', function () {
     ]);
 });
 
-// Route API Resource untuk Produk
+// Routes untuk authentikasi
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::get('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+
+// Routes untuk produk (untuk dipilih/dibeli oleh siswa)
 Route::apiResource('produk', ProdukController::class);
 
-// Route untuk autentikasi
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login',    [AuthController::class, 'login']);
-Route::post('/logout',   [AuthController::class, 'logout']);
-
-// Endpoint untuk mengecek user yang sedang login
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
-
+// Routes untuk pendaftaran
 Route::middleware('auth:sanctum')->post('/pendaftaran', [PendaftaranController::class, 'store']);
-Route::middleware('auth:sanctum')->get('/pendaftaran/{id}', [PendaftaranController::class, 'show']);
+Route::get('/pendaftaran/{id}', [PendaftaranController::class, 'show']);
+
+// Routes untuk pembayaran
+Route::post('pembayaran', [PembayaranController::class, 'store']);
+Route::get('pembayaran', [PembayaranController::class, 'index']); // Add this line to get all payments
+Route::get('pembayaran/{id}', [PembayaranController::class, 'show']);
+Route::post('pembayaran/{id}/upload-bukti', [PembayaranController::class, 'uploadBukti']);
+Route::put('pembayaran/{id}/konfirmasi', [PembayaranController::class, 'konfirmasi']);
+
+// --- NEW ROUTES FOR MATERI AND SUBMATERI ---
+
+// Routes untuk Materi (Modul)
+Route::apiResource('materis', MateriController::class);
+// Custom route untuk mengambil materi berdasarkan produk_id
+Route::get('produk/{produk_id}/materis', [MateriController::class, 'getByProdukId']);
+
+// Routes untuk SubMateri (Lessons)
+Route::apiResource('sub-materis', SubMateriController::class);
+// Custom route untuk mengambil sub_materi berdasarkan materi_id (modul), opsional bisa filter tipe
+Route::get('materis/{materi_id}/sub-materis', [SubMateriController::class, 'getByMateriId']);
+
+// --- Rute Baru untuk mengambil produk yang dibeli user ---
+Route::get('my-products', [PendaftaranController::class, 'getMyPurchasedProducts']); // <--- TAMBAHKAN BARIS INI
 
 Route::middleware('auth:sanctum')->group(function () {
-    // Routes untuk pembayaran
-    Route::get('pembayaran', [PembayaranController::class, 'index']);
-    Route::post('pembayaran', [PembayaranController::class, 'store']);
-    Route::get('pembayaran/{id}', [PembayaranController::class, 'show']);
-    Route::post('pembayaran/{id}/upload-bukti', [PembayaranController::class, 'uploadBukti']);
-    Route::put('pembayaran/{id}/konfirmasi', [PembayaranController::class, 'konfirmasi']);
+    Route::put('/sub-materi/{id}/lihat', [SubMateriStatusController::class, 'lihat']);
+    Route::get('/materi/{id}/sub-materi', [SubMateriStatusController::class, 'list']);
+});
 
-    // --- NEW ROUTES FOR MATERI AND SUBMATERI ---
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/produk/{produkId}/materis', [ProdukController::class, 'getMaterisByProduk']);
+});
 
-    // Routes untuk Materi (Modul)
-    Route::apiResource('materis', MateriController::class);
-    // Custom route untuk mengambil materi berdasarkan produk_id
-    Route::get('produk/{produk_id}/materis', [MateriController::class, 'getByProdukId']);
+// Endpoint untuk memproses akses materi secara manual
+Route::middleware('auth:sanctum')->post('/pembayaran/{id}/proses-akses-materi', [App\Http\Controllers\MateriAksesController::class, 'prosesAkses']);
 
-    // Routes untuk SubMateri (Lessons)
-    Route::apiResource('sub-materis', SubMateriController::class);
-    // Custom route untuk mengambil sub_materi berdasarkan materi_id (modul), opsional bisa filter tipe
-    Route::get('materis/{materi_id}/sub-materis', [SubMateriController::class, 'getByMateriId']);
+// Tambahkan route baru untuk admin/pendaftaran
+Route::middleware('auth:sanctum')->get('/admin/pendaftaran', [App\Http\Controllers\PendaftaranController::class, 'getAllPendaftaran']);
 
-    // --- Rute Baru untuk mengambil produk yang dibeli user ---
-    Route::get('my-products', [PendaftaranController::class, 'getMyPurchasedProducts']); // <--- TAMBAHKAN BARIS INI
-
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::put('/sub-materi/{id}/lihat', [SubMateriStatusController::class, 'lihat']);
-        Route::get('/materi/{id}/sub-materi', [SubMateriStatusController::class, 'list']);
-    });
-
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::get('/produk/{produkId}/materis', [ProdukController::class, 'getMaterisByProduk']);
-    });
+// Route untuk Tutor
+Route::middleware('auth:sanctum')->prefix('tutor')->group(function () {
+    Route::get('/profile', [TutorController::class, 'getMyProfile']);
+    Route::post('/profile', [TutorController::class, 'updateProfile']);
+    Route::get('/products', [TutorController::class, 'getMyProducts']);
+    Route::get('/products/{produkId}/students', [TutorController::class, 'getStudentsByProduct']);
 });

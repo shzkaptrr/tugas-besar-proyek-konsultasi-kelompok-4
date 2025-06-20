@@ -61,7 +61,7 @@ export default function Login() {
         const role = data.user.role;
       
         if (role === 'siswa') navigate("/home-after-login");
-        else if (role === 'tutor') navigate("/statistic-monitoring");
+        else if (role === 'tutor') navigate("/dashboard-tutor");
         else if (role === 'admin') navigate("/dashboard-admin");
       }
       

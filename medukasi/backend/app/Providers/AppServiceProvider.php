@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\Pembayaran;
+use App\Observers\PembayaranObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Daftarkan observer untuk model Pembayaran
+        Pembayaran::observe(PembayaranObserver::class);
     }
 }

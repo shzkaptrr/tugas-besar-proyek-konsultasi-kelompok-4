@@ -13,7 +13,7 @@ class PembayaranController extends Controller
     // Menampilkan semua pembayaran
     public function index()
     {
-        $pembayaran = Pembayaran::with('pendaftaran')->get();
+        $pembayaran = Pembayaran::with(['pendaftaran.user', 'pendaftaran.produk'])->get();
         return response()->json($pembayaran);
     }
 
@@ -21,7 +21,7 @@ class PembayaranController extends Controller
     public function show($id)
     {
         try {
-            $pembayaran = Pembayaran::with(['pendaftaran.produk'])->findOrFail($id);
+            $pembayaran = Pembayaran::with(['pendaftaran.produk', 'pendaftaran.user'])->findOrFail($id);
             
             return response()->json([
                 'success' => true,
@@ -127,7 +127,7 @@ class PembayaranController extends Controller
     public function konfirmasi(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'status_konfirmasi' => 'required|in:dikonfirmasi,ditolak',
+            'status_konfirmasi' => 'required|in:sukses,gagal',
             'catatan' => 'nullable|string'
         ]);
 
@@ -146,6 +146,14 @@ class PembayaranController extends Controller
                 'catatan' => $request->catatan
             ]);
 
+            // Jika status sukses, tambahkan log untuk membantu debugging
+            if ($request->status_konfirmasi === 'sukses') {
+                \Log::info('Pembayaran dikonfirmasi sukses', [
+                    'pembayaran_id' => $pembayaran->pembayaran_id,
+                    'pendaftaran_id' => $pembayaran->pendaftaran_id
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Status pembayaran berhasil diupdate',
@@ -154,7 +162,7 @@ class PembayaranController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal mengupdate status pembayaran'
+                'message' => 'Gagal mengupdate status pembayaran: ' . $e->getMessage()
             ], 500);
         }
     }
