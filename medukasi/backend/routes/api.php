@@ -61,7 +61,7 @@ Route::apiResource('sub-materis', SubMateriController::class);
 Route::get('materis/{materi_id}/sub-materis', [SubMateriController::class, 'getByMateriId']);
 
 // --- Rute Baru untuk mengambil produk yang dibeli user ---
-Route::get('my-products', [PendaftaranController::class, 'getMyPurchasedProducts']); // <--- TAMBAHKAN BARIS INI
+Route::middleware('auth:sanctum')->get('my-products', [PendaftaranController::class, 'getMyPurchasedProducts']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::put('/sub-materi/{id}/lihat', [SubMateriStatusController::class, 'lihat']);

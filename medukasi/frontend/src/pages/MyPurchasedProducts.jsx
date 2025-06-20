@@ -5,9 +5,6 @@ import { ShoppingBag, ArrowRight } from 'lucide-react';
 import Header from '../components/Header'; 
 import Footer from '../components/Footer';
 
-
-
-
 const MyPurchasedProducts = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);

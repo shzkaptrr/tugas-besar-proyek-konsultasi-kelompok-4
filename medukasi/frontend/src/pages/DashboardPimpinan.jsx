@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import HeaderAdmin from '../components/HeaderAdmin';
+import HeaderAdmin from '../components/HeaderAdminTutor';
 import SidebarPimpinan from '../components/SidebarPimpinan';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
