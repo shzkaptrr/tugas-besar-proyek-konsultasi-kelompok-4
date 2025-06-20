@@ -96,12 +96,20 @@ const DashboardAdmin = () => {
       // Menyimpan data mentah
       setPendaftarData(data.data || []);
       
+      // Debugging: Melihat struktur data lengkap
+      console.log("📊 Detail struktur data pendaftar:", 
+        data.data.length > 0 ? {
+          first_item: data.data[0],
+          user_data: data.data[0]?.user,
+          produk_data: data.data[0]?.produk
+        } : "No data items");
+      
       // Menentukan tahun-tahun yang tersedia dari data
       const years = extractYearsFromData(data.data || []);
       setAvailableYears(years);
       
       // Memperbarui tabel siswa dengan data dari API
-      updateStudentsTable(data.data || []);
+      updateStudentsTable(data.data);
       
       // Memperbarui data chart berdasarkan tahun yang dipilih
       updateChartData(data.data || [], filteredYear);
@@ -329,6 +337,7 @@ const DashboardAdmin = () => {
   const updateStudentsTable = (data) => {
     // Debug log untuk melihat format tanggal yang diterima
     console.log("Format tanggal pendaftaran dari API:", data.length > 0 ? data[0].tanggal_pendaftaran : "No data");
+    console.log("Raw data from API (first 3 items):", data.slice(0, 3));
     
     const formattedStudents = data.map(item => {
       // Validasi tanggal pendaftaran
@@ -344,16 +353,30 @@ const DashboardAdmin = () => {
         }
       }
       
+      // Log untuk membantu debugging
+      if (item.user) {
+        console.log("User data available:", {
+          user_id: item.user.user_id || item.user.id,
+          nama: item.user.nama_lengkap,
+          email: item.user.email
+        });
+      } else {
+        console.warn("⚠️ Missing user data for pendaftaran:", item.pendaftaran_id);
+      }
+      
       return {
         id: item.pendaftaran_id,
         name: item.user ? item.user.nama_lengkap : 'Unknown',
         program: item.produk ? item.produk.nama_produk : 'Unknown',
         tanggal_pendaftaran: formattedDate,
-        bukti: '',
+        sumber_informasi: item.sumber_informasi || 'N/A',
+        asal_sekolah: item.asal_sekolah || 'N/A',
+        no_telp_ortu: item.no_telp_ortu || 'N/A',
         status: item.status || 'Unknown'
       };
     });
     
+    console.log("Formatted students data:", formattedStudents);
     setStudents(formattedStudents);
   };
   
@@ -396,11 +419,8 @@ const DashboardAdmin = () => {
     }
   }, [activeMenu]); // Fetch data when component mounts or activeMenu changes
 
-  // Di bawah state
-  const visibleStudents = students.slice(0, 10); // Potong array siswa hanya 10 baris
-  
-  // Filter students based on search query
-  const filteredStudents = visibleStudents.filter(student => 
+  // Filter students based on search query - perbaikan untuk menampilkan semua data
+  const filteredStudents = students.filter(student => 
     student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.program.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -552,7 +572,10 @@ const DashboardAdmin = () => {
                             <th className="px-6 py-4 text-left text-sm font-semibold text-white">No</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-white">Nama</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-white">Program</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Sumber Informasi</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Asal Sekolah</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-white">Tanggal Pendaftaran</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Status</th>
                           </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 bg-white text-gray-800">
@@ -562,14 +585,17 @@ const DashboardAdmin = () => {
                               <td className="px-6 py-4 text-sm">{index + 1}</td>
                               <td className="px-6 py-4 text-sm">{student.name}</td>
                               <td className="px-6 py-4 text-sm">{student.program}</td>
+                              <td className="px-6 py-4 text-sm">{student.sumber_informasi}</td>
+                              <td className="px-6 py-4 text-sm">{student.asal_sekolah}</td>
                               <td className="px-6 py-4 text-sm">
                                 {student.tanggal_pendaftaran ? new Date(student.tanggal_pendaftaran).toLocaleDateString('id-ID') : '-'}
                               </td>
+                              <td className="px-6 py-4 text-sm">{student.status}</td>
                             </tr>
                             ))
                           ) : (
                             <tr>
-                            <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                            <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                               {searchQuery ? 'Tidak ada data yang sesuai dengan pencarian' : 'Tidak ada data pendaftar'}
                             </td>
                             </tr>

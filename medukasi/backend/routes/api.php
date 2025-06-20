@@ -29,6 +29,15 @@ Route::get('/test-connection', function () {
     ]);
 });
 
+// Route untuk auth check
+Route::middleware('auth:sanctum')->get('/auth/check', function (Request $request) {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Token valid',
+        'user' => $request->user()
+    ]);
+});
+
 // Routes untuk authentikasi
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -52,8 +61,10 @@ Route::put('pembayaran/{id}/konfirmasi', [PembayaranController::class, 'konfirma
 
 // Routes untuk Materi (Modul)
 Route::apiResource('materis', MateriController::class);
-// Custom route untuk mengambil materi berdasarkan produk_id
-Route::get('produk/{produk_id}/materis', [MateriController::class, 'getByProdukId']);
+
+// --- RUTE API UNTUK MATERI ---
+// PERBAIKAN: Hapus salah satu rute yang konflik, gunakan hanya controller MateriController untuk konsistensi
+Route::middleware('auth:sanctum')->get('produk/{produk_id}/materis', [MateriController::class, 'getByProdukId']);
 
 // Routes untuk SubMateri (Lessons)
 Route::apiResource('sub-materis', SubMateriController::class);
@@ -61,16 +72,16 @@ Route::apiResource('sub-materis', SubMateriController::class);
 Route::get('materis/{materi_id}/sub-materis', [SubMateriController::class, 'getByMateriId']);
 
 // --- Rute Baru untuk mengambil produk yang dibeli user ---
-Route::get('my-products', [PendaftaranController::class, 'getMyPurchasedProducts']); // <--- TAMBAHKAN BARIS INI
-
+Route::middleware('auth:sanctum')->get('my-products', [PendaftaranController::class, 'getMyPurchasedProducts']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::put('/sub-materi/{id}/lihat', [SubMateriStatusController::class, 'lihat']);
     Route::get('/materi/{id}/sub-materi', [SubMateriStatusController::class, 'list']);
 });
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/produk/{produkId}/materis', [ProdukController::class, 'getMaterisByProduk']);
-});
+// HAPUS ROUTE DUPLIKAT
+// Route::middleware('auth:sanctum')->group(function () {
+//     Route::get('/produk/{produkId}/materis', [ProdukController::class, 'getMaterisByProduk']);
+// });
 
 // Endpoint untuk memproses akses materi secara manual
 Route::middleware('auth:sanctum')->post('/pembayaran/{id}/proses-akses-materi', [App\Http\Controllers\MateriAksesController::class, 'prosesAkses']);

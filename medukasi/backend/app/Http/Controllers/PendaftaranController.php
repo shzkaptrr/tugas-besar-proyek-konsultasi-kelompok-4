@@ -70,28 +70,66 @@ class PendaftaranController extends Controller
         ]);
     }
 
-    // app/Http/Controllers/PendaftaranController.php
-    public function getMyPurchasedProducts()
-    {
-        $user = Auth::user();
+    
+// app/Http/Controllers/PendaftaranController.php
+public function getMyPurchasedProducts()
+{
+    $user = Auth::user();
 
-        if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
-        }
-
-        $loggedInUserId = $user->user_id; // Pastikan ini sudah $user->user_id
-
-        $purchasedProducts = Pendaftaran::where('user_id', $loggedInUserId) // Pastikan ini $user->user_id
-                                ->whereHas('pembayaran', function ($query) {
-                                    $query->where('status_konfirmasi', 'sukses');
-                                })
-                                ->with(['produk', 'pembayaran']) // <--- TAMBAHKAN 'pembayaran' DI SINI
-                                ->get();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Purchased products retrieved successfully',
-            'data' => $purchasedProducts
-        ], 200);
+    if (!$user) {
+        return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
     }
+
+    // Add detailed debug logging to check user details
+    \Log::info('getMyPurchasedProducts accessed by user:', [
+        'user_id_attribute' => $user->id ?? 'not set',
+        'user_id_custom' => $user->user_id ?? 'not set',
+        'name' => $user->nama_lengkap ?? $user->name ?? 'Unknown',
+        'email' => $user->email,
+        'role' => $user->role ?? 'Unknown'
+    ]);
+
+    // Try using the custom user_id field which is our primary key
+    $loggedInUserId = $user->user_id ?? $user->id; 
+
+    // Perbaikan: Gunakan query yang hanya mengambil produk dengan status pembayaran "sukses"
+    // tanpa tergantung pada status pembayaran lainnya
+    $purchasedProducts = Pendaftaran::where('user_id', $loggedInUserId)
+                            ->whereHas('pembayaran', function ($query) {
+                                $query->where('status_konfirmasi', 'sukses');
+                            })
+                            ->with(['produk', 'pembayaran' => function ($query) {
+                                // Hanya ambil pembayaran dengan status sukses
+                                $query->where('status_konfirmasi', 'sukses');
+                            }]) 
+                            ->get();
+    
+    \Log::info('Purchased products result:', [
+        'count' => $purchasedProducts->count(),
+        'products' => $purchasedProducts->pluck('produk_id')->toArray()
+    ]);
+
+    // Debug: Log semua pendaftaran & pembayaran user ini untuk memastikan query benar
+    $allPendaftaran = Pendaftaran::where('user_id', $loggedInUserId)->with('pembayaran')->get();
+    \Log::info('All pendaftaran for this user:', [
+        'count' => $allPendaftaran->count(),
+        'pendaftaran' => $allPendaftaran->map(function($p) {
+            return [
+                'pendaftaran_id' => $p->pendaftaran_id,
+                'produk_id' => $p->produk_id,
+                'status' => $p->status,
+                'pembayaran' => $p->pembayaran ? [
+                    'pembayaran_id' => $p->pembayaran->pembayaran_id ?? null,
+                    'status_konfirmasi' => $p->pembayaran->status_konfirmasi ?? null
+                ] : null
+            ];
+        })->toArray()
+    ]);
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Purchased products retrieved successfully',
+        'data' => $purchasedProducts
+    ], 200);
+}
 }

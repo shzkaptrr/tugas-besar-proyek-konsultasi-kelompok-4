@@ -44,10 +44,47 @@ const MaterisByProductWrapper = () => {
 const App = () => {
   // Tambahkan ini untuk test koneksi
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/api/test-connection')
-      .then(response => response.json())
-      .then(data => console.log('✅ Response dari Laravel:', data))
-      .catch(error => console.error('❌ Gagal terhubung:', error));
+    const testBackendConnection = async () => {
+      // Gunakan konstanta untuk base URL API
+      const BACKEND_URL = 'http://localhost:8000';
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`Mencoba koneksi ke backend (percobaan ke-${retryCount + 1})...`);
+          
+          const response = await fetch(`${BACKEND_URL}/api/test-connection`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            signal: AbortSignal.timeout(8000) // 8 detik timeout
+          });
+          
+          console.log("Response status:", response.status, response.statusText);
+          const data = await response.json();
+          console.log('✅ Response dari Laravel:', data);
+          
+          // Jika berhasil, keluar dari loop
+          return;
+        } catch (error) {
+          console.error(`Percobaan koneksi ke-${retryCount + 1} gagal:`, error);
+          retryCount++;
+          
+          if (retryCount >= maxRetries) {
+            console.error('❌ Gagal terhubung ke backend setelah beberapa percobaan:', error);
+            break;
+          }
+          
+          // Tunggu sebelum mencoba lagi
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+    };
+    
+    testBackendConnection();
   }, []);
 
   return (

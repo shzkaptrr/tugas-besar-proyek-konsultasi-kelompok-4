@@ -9,6 +9,7 @@ import keyIcon from "../assets/login/key.png";
 export default function Login() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false); // State untuk Remember Me
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -53,9 +54,25 @@ export default function Login() {
         );
       }
   
-      if (data.token && data.user) {
+      // Jika login berhasil
+      if (data.token) {
+        // Simpan token dan user data ke localStorage
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('user_data', JSON.stringify(data.user));
+        
+        // BARU: Simpan kredensial jika user menyetujui "remember me"
+        if (rememberMe) {
+          const credentials = JSON.stringify({
+            email: formData.email.trim(),
+            password: formData.password
+          });
+          localStorage.setItem('user_credentials', credentials);
+          console.log('✅ Kredensial login disimpan untuk login otomatis.');
+        } else {
+          // Hapus kredensial jika tidak ingin diingat
+          localStorage.removeItem('user_credentials');
+        }
+        
         alert("Login berhasil!");
       
         const role = data.user.role;
@@ -150,6 +167,23 @@ export default function Login() {
                   minLength="6"
                   autoComplete="new-password" // <-- Tambahkan ini
                 />
+              </div>
+
+              {/* Remember Me Checkbox - Baru ditambahkan */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  checked={rememberMe}
+                  onChange={() => setRememberMe(!rememberMe)}
+                />
+                <label
+                  htmlFor="rememberMe"
+                  className="ml-2 block text-gray-800"
+                >
+                  Ingat saya
+                </label>
               </div>
 
               {/* Tombol Login */}

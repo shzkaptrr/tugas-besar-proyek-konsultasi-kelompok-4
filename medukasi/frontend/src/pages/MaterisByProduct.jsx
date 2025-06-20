@@ -1,14 +1,18 @@
 // src/pages/MaterisByProduct.jsx
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { BookOpen, Play, FileText, Download, Clock, ChevronRight, CheckCircle, XCircle, Users } from 'lucide-react';
 import Header from '../components/Header';
+import AuthContext from '../components/AuthContext';
 
 const MaterisByProduct = () => {
     const { produkId } = useParams(); // Ambil produkId dari URL
     const [materis, setMateris] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const navigate = useNavigate();
+    const { refreshAuth } = useContext(AuthContext);
+    const [retryAttempts, setRetryAttempts] = useState(0); // Counter untuk retry
 
     useEffect(() => {
         console.log('🔍 DEBUG MaterisByProduct: Component loaded with produkId:', produkId);
@@ -22,73 +26,127 @@ const MaterisByProduct = () => {
     }, [produkId]); // Re-fetch jika produkId di URL berubah
 
     const fetchMaterisForProduct = async () => {
+        if (retryAttempts > 3) {
+            console.error('❌ DEBUG MaterisByProduct: Terlalu banyak percobaan gagal');
+            setError('Terlalu banyak percobaan gagal. Silakan coba login kembali.');
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setError(null);
         
         try {
             console.log('🔄 DEBUG MaterisByProduct: Fetching materials for produkId:', produkId);
             
-            // Ini adalah endpoint yang akan memeriksa akses user di backend
-            const url = `http://localhost:8000/api/produk/${produkId}/materis`;
-
+            // Dapatkan token terbaru
             const token = localStorage.getItem('auth_token');
             if (!token) {
-                throw new Error('Authentication token not found. Please log in.');
+                console.error('❌ DEBUG MaterisByProduct: Token tidak ditemukan');
+                navigate('/login', { replace: true });
+                return;
             }
-            
-            console.log('🔑 DEBUG MaterisByProduct: Using token:', token.substring(0, 10) + '...');
 
-            const response = await fetch(url, {
+            // Mencoba endpoint untuk mengambil materi (PERBAIKAN: Gunakan format parameter yang konsisten)
+            // Menggunakan 'produk_id' yang sama dengan yang didefinisikan di backend route
+            let url = `http://localhost:8000/api/produk/${produkId}/materis`;
+            console.log('🔑 DEBUG MaterisByProduct: Mencoba endpoint:', url);
+            
+            let response = await fetch(url, {
+                method: 'GET', // Pastikan metode GET
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
+                    'Cache-Control': 'no-cache', // Pastikan tidak menggunakan cache
                 },
             });
+            
+            console.log('📡 DEBUG MaterisByProduct: API Response Status:', response.status, response.statusText);
+
+            // Handle different response statuses
+            if (response.status === 401) {
+                console.error('🔒 DEBUG MaterisByProduct: Authentication failed - token may be expired');
+                
+                // PERBAIKAN: Coba refresh token dengan cepat
+                try {
+                    // Lakukan request ke backend untuk validasi token
+                    const checkResponse = await fetch('http://localhost:8000/api/auth/check', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    // Jika validasi berhasil tapi endpoint materis gagal, ini masalah permission
+                    if (checkResponse.ok) {
+                        console.log('✅ DEBUG MaterisByProduct: Token valid, tapi endpoint /materis menolak');
+                        throw new Error('Anda tidak memiliki izin untuk mengakses materi produk ini');
+                    }
+                    
+                    // Token tidak valid, coba login otomatis
+                    const savedCredentials = localStorage.getItem('user_credentials');
+                    if (savedCredentials) {
+                        console.log('🔄 DEBUG MaterisByProduct: Mencoba login otomatis');
+                        const { email, password } = JSON.parse(savedCredentials);
+                        const loginResponse = await fetch('http://localhost:8000/api/login', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ email, password }),
+                        });
+
+                        if (loginResponse.ok) {
+                            const loginData = await loginResponse.json();
+                            localStorage.setItem('auth_token', loginData.token);
+                            
+                            if (loginData.user) {
+                                localStorage.setItem('user_data', JSON.stringify(loginData.user));
+                            }
+                            
+                            console.log('✅ DEBUG MaterisByProduct: Login otomatis berhasil');
+                            
+                            // PERBAIKAN: Gunakan setRetryAttempts untuk melacak upaya
+                            setRetryAttempts(prevAttempts => prevAttempts + 1);
+                            fetchMaterisForProduct(); // Recursive call setelah login otomatis
+                            return;
+                        }
+                    }
+                } catch (retryError) {
+                    console.error('❌ DEBUG MaterisByProduct: Error saat mencoba login otomatis:', retryError);
+                }
+                
+                // Jika tidak berhasil, arahkan ke login
+                localStorage.removeItem('auth_token');
+                navigate('/login', { 
+                    replace: true, 
+                    state: { 
+                        from: `/my-products/${produkId}/materials`,
+                        message: 'Sesi Anda telah berakhir. Silakan login kembali.' 
+                    } 
+                });
+                return;
+            }
 
             if (!response.ok) {
-                const errorData = await response.json();
-                // Jika status 403, berarti tidak ada akses
-                if (response.status === 403) {
-                    console.error('❌ DEBUG MaterisByProduct: Access denied:', errorData);
-                    throw new Error(errorData.message || 'Anda tidak memiliki akses ke produk ini.');
+                let errorMessage = 'Failed to fetch materials for this product';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch (e) {
+                    // Jika response bukan JSON valid, gunakan pesan default
                 }
-                throw new Error(errorData.message || 'Failed to fetch materials for this product');
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
             console.log('✅ DEBUG MaterisByProduct: Materials fetched successfully:', data);
             
-            // Data user yang login
-            const userDataString = localStorage.getItem('user_data');
-            const userData = userDataString ? JSON.parse(userDataString) : null;
-            console.log('👤 DEBUG MaterisByProduct: Current user:', userData ? userData.user_id : 'Unknown');
-            
-            // Debugging sub_materi_user_statuses
-            if (data.data && data.data.length > 0) {
-                console.log('📊 DEBUG MaterisByProduct: Found materials:', data.data.length);
-                
-                let totalSubMateris = 0;
-                let withAccessStatus = 0;
-                
-                data.data.forEach(materi => {
-                    if (materi.sub_materis && materi.sub_materis.length > 0) {
-                        totalSubMateris += materi.sub_materis.length;
-                        
-                        const withStatus = materi.sub_materis.filter(sub => sub.user_status).length;
-                        withAccessStatus += withStatus;
-                        
-                        console.log(`📚 DEBUG MaterisByProduct: Materi "${materi.nama_materi}" has ${materi.sub_materis.length} sub-materis, ${withStatus} with user status`);
-                        
-                        // Log details tentang status setiap sub materi
-                        materi.sub_materis.forEach(sub => {
-                            console.log(`   🔹 Sub-materi: "${sub.judul_sub_materi}", Status: ${sub.user_status ? sub.user_status.status : 'tidak ada status'}, User ID: ${sub.user_status ? sub.user_status.user_id : 'N/A'}`);
-                        });
-                    }
-                });
-                
-                console.log(`📈 DEBUG MaterisByProduct: Total ${totalSubMateris} sub-materis, ${withAccessStatus} with user status (${Math.round((withAccessStatus/totalSubMateris)*100)}%)`);
-            }
+            // Reset retry counter setelah berhasil
+            setRetryAttempts(0);
             
             // Hitung progress di sini:
             const materisWithProgress = data.data.map(materi => {
@@ -100,6 +158,7 @@ const MaterisByProduct = () => {
               console.log(`📊 DEBUG MaterisByProduct: Progress for "${materi.nama_materi}": ${progress}% (${jumlahDilihat}/${materi.sub_materis.length} viewed)`);
               return { ...materi, progress };
             });
+            
             setMateris(materisWithProgress);
         } catch (err) {
             console.error('❌ DEBUG MaterisByProduct: Error fetching materials:', err);

@@ -5,13 +5,11 @@ import { ShoppingBag, ArrowRight } from 'lucide-react';
 import Header from '../components/Header'; 
 import Footer from '../components/Footer';
 
-
-
-
 const MyPurchasedProducts = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [debugInfo, setDebugInfo] = useState(null); // New state for debug info
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -38,29 +36,91 @@ const MyPurchasedProducts = () => {
             if (userData && userData.user_id) { // Menggunakan user_id
                 console.log('--- MyPurchasedProducts Debugging ---');
                 console.log(`User ID yang sedang login: ${userData.user_id}`);
+                
+                // Add detailed user info logging
+                console.log('User data details:', {
+                    user_id: userData.user_id,
+                    id: userData.id,  // Check if both ID fields exist
+                    email: userData.email,
+                    role: userData.role
+                });
             } else {
                 console.log('--- MyPurchasedProducts Debugging ---');
                 console.log('Warning: User data found, but user ID (user_id) is missing from it.');
+                console.log('Full user data object:', userData);
             }
 
-            const response = await fetch('http://localhost:8000/api/my-products', {
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
+            // Implementasi retry mechanism
+            let retryCount = 0;
+            const maxRetries = 3;
+            let response;
+
+            // Gunakan konstanta untuk base URL API
+            const BACKEND_URL = 'http://localhost:8000';
+
+            while (retryCount < maxRetries) {
+                try {
+                    console.log(`Mencoba fetch data (percobaan ke-${retryCount + 1})...`);
+                    
+                    console.log(`🔍 Calling API endpoint: ${BACKEND_URL}/api/my-products with auth token`);
+                    
+                    response = await fetch(`${BACKEND_URL}/api/my-products`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                        },
+                        // Menambahkan timeout untuk mencegah fetch tergantung terlalu lama
+                        signal: AbortSignal.timeout(10000) // 10 detik timeout
+                    });
+                    
+                    console.log("Response status:", response.status, response.statusText);
+                    
+                    // Jika berhasil, keluar dari loop
+                    break;
+                } catch (retryError) {
+                    console.error(`Percobaan ${retryCount + 1} gagal:`, retryError);
+                    retryCount++;
+                    
+                    // Jika sudah mencapai batas maksimum percobaan, lempar error
+                    if (retryCount >= maxRetries) {
+                        throw new Error(`Gagal terhubung ke server setelah ${maxRetries} kali percobaan. Server mungkin sedang down atau ada masalah koneksi.`);
+                    }
+                    
+                    // Tunggu sebelum mencoba lagi (backoff eksponensial)
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                }
+            }
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to fetch purchased products');
+                const errorText = await response.text();
+                let errorMessage;
+                try {
+                    const errorData = JSON.parse(errorText);
+                    errorMessage = errorData.message || `Server merespon dengan status: ${response.status} ${response.statusText}`;
+                } catch (e) {
+                    errorMessage = `Server merespon dengan status: ${response.status} ${response.statusText}\nResponse: ${errorText}`;
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
             setProducts(data.data);
+            
+            // Store debug info
+            setDebugInfo({
+                responseData: data,
+                timestamp: new Date().toISOString()
+            });
 
             // --- CONSOLE LOG: Data Pendaftaran dan Produk + Detail Pembayaran ---
             console.log('Data yang diterima dari /api/my-products:', data);
+            
+            // Log the SQL query used (not actual SQL, just for debugging purposes)
+            console.log("🔍 DEBUG SQL Query (pseudo): SELECT * FROM pendaftaran WHERE user_id = " + userData.user_id + 
+                        " AND EXISTS (SELECT * FROM pembayaran WHERE pembayaran.pendaftaran_id = pendaftaran.pendaftaran_id AND pembayaran.status_konfirmasi = 'sukses')");
+            
             if (data.data && data.data.length > 0) {
                 console.log('Detail Pendaftaran dan Produk yang Ditemukan:');
                 data.data.forEach((pendaftaran, index) => {
@@ -83,11 +143,15 @@ const MyPurchasedProducts = () => {
                 });
             } else {
                 console.log('Tidak ada produk yang dibeli atau data kosong.');
+                console.log('Pastikan pembayaran sudah dikonfirmasi dengan status "sukses" di database.');
+                
+                // Check if user ID might be different between frontend and backend
+                console.log('⚠️ HINT: Periksa apakah user_id di frontend (' + userData.user_id + ') sama dengan ID user di backend.');
             }
             // --- END CONSOLE LOG ---
 
         } catch (err) {
-            setError(err.message);
+            setError(err.message || "Terjadi kesalahan saat mengambil data produk Anda");
             console.error('Error fetching purchased products:', err);
         } finally {
             setLoading(false);
@@ -96,6 +160,16 @@ const MyPurchasedProducts = () => {
 
     const handleViewMaterials = (produkId) => {
         navigate(`/my-products/${produkId}/materials`);
+    };
+
+    // Function to show debug info
+    const showDebugModal = () => {
+        if (debugInfo) {
+            console.log("Full API Response:", debugInfo.responseData);
+            alert(`Debug info has been logged to console. Check browser developer tools.`);
+        } else {
+            alert("No debug info available");
+        }
     };
 
     if (loading) return (
@@ -123,26 +197,39 @@ const MyPurchasedProducts = () => {
             {products.length === 0 ? (
               <div className="text-center py-16 text-gray-700">
                 <p className="text-lg mb-6">Anda belum memiliki produk yang dibeli.</p>
-                <button
-                  onClick={() => navigate('/product')}
-                  className="w-full flex justify-center items-center 
-                           bg-gradient-to-r from-blue-600 to-red-600
-                           text-white text-base font-semibold py-3 
-                           rounded-full
-                           border-2 border-white
-                           hover:from-blue-700 hover:to-red-700
-                           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 
-                           transition-all duration-300 shadow-lg"
-                >
-                  <ArrowRight className="mr-2" size={20} />
-                  Lihat Semua Produk
-                </button>
+                <p className="mb-6 text-sm text-gray-500">
+                  Pastikan pembayaran Anda sudah dikonfirmasi dengan status "sukses" oleh admin.
+                </p>
+                <div className="flex flex-col gap-3 max-w-sm mx-auto">
+                  <button
+                    onClick={() => navigate('/product')}
+                    className="w-full flex justify-center items-center 
+                             bg-gradient-to-r from-blue-600 to-red-600
+                             text-white text-base font-semibold py-3 
+                             rounded-full
+                             border-2 border-white
+                             hover:from-blue-700 hover:to-red-700
+                             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 
+                             transition-all duration-300 shadow-lg"
+                  >
+                    <ArrowRight className="mr-2" size={20} />
+                    Lihat Semua Produk
+                  </button>
+                  
+                  {/* Debug button for developers */}
+                  <button
+                    onClick={showDebugModal}
+                    className="text-sm text-gray-500 underline mt-4"
+                  >
+                    Debug Info (For Developers)
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-8">
                 {products.map((pendaftaran) => (
                   <div
-                    key={pendaftaran.produk.produk_id}
+                    key={pendaftaran.pendaftaran_id} // Change from produk.produk_id to pendaftaran_id to avoid duplicate keys
                     className="bg-gradient-to-br from-red-500 to-indigo-900 p-1 rounded-2xl shadow-2xl"
                   >
                     {/* Inner glass-style card */}
