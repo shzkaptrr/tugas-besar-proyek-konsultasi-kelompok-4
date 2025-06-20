@@ -1,39 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import HeaderAdmin from '../components/HeaderAdmin';
+import React, { useState } from 'react';
+import HeaderAdmin from '../components/HeaderAdminTutor';
 import SidebarAdmin from '../components/SidebarAdmin';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const DashboardAdmin = () => {
   const [activeMenu, setActiveMenu] = useState('Jumlah Pendaftar');
   const [searchQuery, setSearchQuery] = useState('');
-  const [paymentSearchQuery, setPaymentSearchQuery] = useState(''); // New state for payment search
-  const [loading, setLoading] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false); // New state for payment loading
-  const [error, setError] = useState(null);
-  const [paymentError, setPaymentError] = useState(null); // New state for payment errors
-  
-  // State untuk menyimpan data pendaftar dari API
-  const [pendaftarData, setPendaftarData] = useState([]);
-  const [filteredYear, setFilteredYear] = useState(new Date().getFullYear()); // Default ke tahun sekarang
-  const [availableYears, setAvailableYears] = useState([]);
-  
-  // Data untuk chart yang sudah difilter berdasarkan tahun
-  const [chartData, setChartData] = useState([]);
-  
-  // Data fallback untuk grafik ketika chartData kosong
-  const defaultMonthlyData = [
-    { month: 'Jan', pendaftar: 0 },
-    { month: 'Feb', pendaftar: 0 },
-    { month: 'Mar', pendaftar: 0 },
-    { month: 'Apr', pendaftar: 0 },
-    { month: 'May', pendaftar: 0 },
-    { month: 'Jun', pendaftar: 0 },
-    { month: 'Jul', pendaftar: 0 },
-    { month: 'Aug', pendaftar: 0 },
-    { month: 'Sep', pendaftar: 0 },
-    { month: 'Oct', pendaftar: 0 },
-    { month: 'Nov', pendaftar: 0 },
-    { month: 'Dec', pendaftar: 0 }
+
+  // Data contoh untuk grafik dan tabel
+  const monthlyData = [
+    { month: 'Jan', pendaftar: 45 },
+    { month: 'Feb', pendaftar: 32 },
+    { month: 'Mar', pendaftar: 67 },
+    { month: 'Apr', pendaftar: 23 },
+    { month: 'May', pendaftar: 89 },
+    { month: 'Jun', pendaftar: 54 },
+    { month: 'Jul', pendaftar: 76 },
+    { month: 'Aug', pendaftar: 45 },
+    { month: 'Sep', pendaftar: 32 },
+    { month: 'Oct', pendaftar: 67 },
+    { month: 'Nov', pendaftar: 23 },
+    { month: 'Dec', pendaftar: 89 }
   ];
 
   const [students, setStudents] = useState([]);
@@ -96,20 +83,12 @@ const DashboardAdmin = () => {
       // Menyimpan data mentah
       setPendaftarData(data.data || []);
       
-      // Debugging: Melihat struktur data lengkap
-      console.log("📊 Detail struktur data pendaftar:", 
-        data.data.length > 0 ? {
-          first_item: data.data[0],
-          user_data: data.data[0]?.user,
-          produk_data: data.data[0]?.produk
-        } : "No data items");
-      
       // Menentukan tahun-tahun yang tersedia dari data
       const years = extractYearsFromData(data.data || []);
       setAvailableYears(years);
       
       // Memperbarui tabel siswa dengan data dari API
-      updateStudentsTable(data.data);
+      updateStudentsTable(data.data || []);
       
       // Memperbarui data chart berdasarkan tahun yang dipilih
       updateChartData(data.data || [], filteredYear);
@@ -337,7 +316,6 @@ const DashboardAdmin = () => {
   const updateStudentsTable = (data) => {
     // Debug log untuk melihat format tanggal yang diterima
     console.log("Format tanggal pendaftaran dari API:", data.length > 0 ? data[0].tanggal_pendaftaran : "No data");
-    console.log("Raw data from API (first 3 items):", data.slice(0, 3));
     
     const formattedStudents = data.map(item => {
       // Validasi tanggal pendaftaran
@@ -353,30 +331,16 @@ const DashboardAdmin = () => {
         }
       }
       
-      // Log untuk membantu debugging
-      if (item.user) {
-        console.log("User data available:", {
-          user_id: item.user.user_id || item.user.id,
-          nama: item.user.nama_lengkap,
-          email: item.user.email
-        });
-      } else {
-        console.warn("⚠️ Missing user data for pendaftaran:", item.pendaftaran_id);
-      }
-      
       return {
         id: item.pendaftaran_id,
         name: item.user ? item.user.nama_lengkap : 'Unknown',
         program: item.produk ? item.produk.nama_produk : 'Unknown',
         tanggal_pendaftaran: formattedDate,
-        sumber_informasi: item.sumber_informasi || 'N/A',
-        asal_sekolah: item.asal_sekolah || 'N/A',
-        no_telp_ortu: item.no_telp_ortu || 'N/A',
+        bukti: '',
         status: item.status || 'Unknown'
       };
     });
     
-    console.log("Formatted students data:", formattedStudents);
     setStudents(formattedStudents);
   };
   
@@ -419,8 +383,11 @@ const DashboardAdmin = () => {
     }
   }, [activeMenu]); // Fetch data when component mounts or activeMenu changes
 
-  // Filter students based on search query - perbaikan untuk menampilkan semua data
-  const filteredStudents = students.filter(student => 
+  // Di bawah state
+  const visibleStudents = students.slice(0, 10); // Potong array siswa hanya 10 baris
+  
+  // Filter students based on search query
+  const filteredStudents = visibleStudents.filter(student => 
     student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.program.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -461,53 +428,13 @@ const DashboardAdmin = () => {
         <div className="w-64 min-w-64 overflow-auto">
           <SidebarAdmin activeMenu={activeMenu} setActiveMenu={setActiveMenu} />
         </div>
-
         <main className="flex-1 flex flex-col overflow-hidden bg-[#F8F9FC] p-6">
           {activeMenu === 'Jumlah Pendaftar' && (
             <>
               {/* Header Section */}
               <div className="flex justify-between items-center mb-8">
                 <h1 className="text-2xl font-bold text-[#3B2E55]">Jumlah Pendaftar</h1>
-                
-                {/* Year Filter */}
-                <div className="flex items-center">
-                  <label htmlFor="yearFilter" className="mr-2 text-[#3B2E55] font-medium">Filter Tahun:</label>
-                  <select 
-                    id="yearFilter"
-                    value={filteredYear}
-                    onChange={handleYearChange}
-                    className="px-3 py-1 border border-[#D5CEE5] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6D6DB0]"
-                  >
-                    {availableYears.length > 0 ? (
-                      availableYears.map((year) => (
-                        <option key={year} value={year}>{year}</option>
-                      ))
-                    ) : (
-                      <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
-                    )}
-                  </select>
-                </div>
               </div>
-
-              {/* Loading state */}
-              {loading && (
-                <div className="flex justify-center items-center h-64">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-                </div>
-              )}
-
-              {/* Error state */}
-              {error && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
-                  <p>{error}</p>
-                  <button 
-                    className="text-blue-600 underline mt-2"
-                    onClick={fetchPendaftarData}
-                  >
-                    Coba lagi
-                  </button>
-                </div>
-              )}
 
               {/* Grafik Pendaftaran */}
               {!loading && !error && (
@@ -572,10 +499,7 @@ const DashboardAdmin = () => {
                             <th className="px-6 py-4 text-left text-sm font-semibold text-white">No</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-white">Nama</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-white">Program</th>
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Sumber Informasi</th>
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Asal Sekolah</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-white">Tanggal Pendaftaran</th>
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Status</th>
                           </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 bg-white text-gray-800">
@@ -585,319 +509,154 @@ const DashboardAdmin = () => {
                               <td className="px-6 py-4 text-sm">{index + 1}</td>
                               <td className="px-6 py-4 text-sm">{student.name}</td>
                               <td className="px-6 py-4 text-sm">{student.program}</td>
-                              <td className="px-6 py-4 text-sm">{student.sumber_informasi}</td>
-                              <td className="px-6 py-4 text-sm">{student.asal_sekolah}</td>
                               <td className="px-6 py-4 text-sm">
                                 {student.tanggal_pendaftaran ? new Date(student.tanggal_pendaftaran).toLocaleDateString('id-ID') : '-'}
                               </td>
-                              <td className="px-6 py-4 text-sm">{student.status}</td>
                             </tr>
                             ))
                           ) : (
                             <tr>
-                            <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                            <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
                               {searchQuery ? 'Tidak ada data yang sesuai dengan pencarian' : 'Tidak ada data pendaftar'}
                             </td>
-                            </tr>
-                          )}
-                          </tbody>
-                        </table>
-                        )}
-                      </div>  
-                      </div>
-                    </>
-                    )}
-
-                    {activeMenu === 'Konfirmasi Pembayaran' && (
-                <>
-                {/* Header Section */}
-    <div className="flex justify-between items-center mb-8">
-      <h1 className="text-2xl font-bold text-[#4A3A6A]">Konfirmasi Pembayaran</h1>
-      
-      {/* Search Bar */}
-      <div className="relative w-96">
-        <input
-          type="text"
-          placeholder="Cari peserta..."
-          className="w-full px-4 py-2 rounded-lg border border-[#D5CEE5] focus:outline-none focus:ring-2 focus:ring-[#6D6DB0]"
-          value={paymentSearchQuery}
-          onChange={(e) => setPaymentSearchQuery(e.target.value)}
-        />
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          className="h-5 w-5 absolute right-3 top-2.5 text-[#6D6DB0]" 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </div>
-    </div>
-
-    {/* Error state */}
-    {paymentError && (
-      <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
-        <p>{paymentError}</p>
-        <button 
-          className="text-blue-600 underline mt-2"
-          onClick={fetchPaymentData}
-        >
-          Coba lagi
-        </button>
-      </div>
-    )}
-
-    {/* Tabel Konfirmasi */}
-    {/* Tabel Semua Pembayaran */}
-<div className="rounded-xl shadow-lg border border-indigo-200 bg-white">
-  <div className="max-h-[600px] overflow-y-auto">
-    {allPaymentsLoading ? (
-      <div className="flex justify-center items-center h-40">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-        <p className="ml-2 text-indigo-500">Memuat data pembayaran...</p>
-      </div>
-    ) : (
-      <table className="w-full">
-        <thead className="bg-blue-600">
-          <tr>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">No</th> {/* Ubah dari ID ke No */}
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Nama Peserta</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Metode Pembayaran</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Bukti Pembayaran</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Status</th>
-          </tr>
-        </thead>
-
-        <tbody className="divide-y divide-gray-200 bg-white text-gray-800">
-          {filteredPaymentConfirmations.length > 0 ? (
-            filteredPaymentConfirmations.map((payment, index) => (  // <-- tambahkan index di sini
-              <tr key={payment.id} >
-                <td className="px-6 py-4 text-sm">{index + 1}</td> {/* Nomor urut */}
-                <td className="px-6 py-4 text-sm">{payment.name}</td>
-                <td className="px-6 py-4 text-sm">{formatPaymentMethod(payment.metode)}</td>
-                <td className="px-6 py-4">
-                  <button
-                    className="text-indigo-600 hover:text-indigo-800 text-sm underline"
-                    onClick={() => handleViewProof(payment.bukti)}
-                  >
-                    Lihat Bukti
-                  </button>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex gap-2">
-                    <button
-                      className={`px-3 py-1 text-xs rounded-md ${
-                        processingPaymentId === payment.id
-                          ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-300 text-white'
-                      }`}
-                      onClick={() => handleConfirmPayment(payment.id, 'sukses')}
-                      disabled={processingPaymentId === payment.id}
-                    >
-                      {processingPaymentId === payment.id ? 'Proses...' : 'Terima'}
-                    </button>
-                    <button
-                      className={`px-3 py-1 text-xs rounded-md ${
-                        processingPaymentId === payment.id
-                          ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : 'bg-red-600 hover:bg-red-300 text-white'
-                      }`}
-                      onClick={() => handleConfirmPayment(payment.id, 'gagal')}
-                      disabled={processingPaymentId === payment.id}
-                    >
-                      {processingPaymentId === payment.id ? 'Proses...' : 'Tolak'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                {paymentSearchQuery
-                  ? 'Tidak ada data yang sesuai dengan pencarian'
-                  : 'Tidak ada pembayaran yang menunggu konfirmasi'}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    )}
-  </div>
-</div>
-
-
-    {/* Modal untuk melihat bukti pembayaran */}
-    {showProofModal && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
-          <div className="p-4 border-b flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Bukti Pembayaran</h3>
-            <button 
-              className="text-gray-400 hover:text-gray-600"
-              onClick={() => setShowProofModal(false)}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div className="p-4">
-            {currentProofUrl && (
-              currentProofUrl.toLowerCase().endsWith('.pdf') ? (
-                <div className="text-center">
-                  <p className="mb-4">Dokumen PDF tidak dapat ditampilkan disini. Silakan buka di tab baru.</p>
-                  <a 
-                    href={currentProofUrl} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  >
-                    Buka PDF
-                  </a>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              ) : (
-                <img 
-                  src={currentProofUrl} 
-                  alt="Bukti Pembayaran" 
-                  className="max-w-full h-auto mx-auto"
-                  onError={(e) => {
-                    e.target.onerror = null; 
-                    e.target.src="https://via.placeholder.com/300x400?text=Gambar+Tidak+Tersedia";
-                  }}
-                />
-              )
-            )}
-          </div>
-          <div className="p-4 border-t flex justify-end">
-            <button 
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md"
-              onClick={() => setShowProofModal(false)}
-            >
-              Tutup
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {/* Semua Pembayaran Section */}
-    <div className="mt-10">
-      <h1 className="text-2xl font-bold text-[#4A3A6A] mb-8">Semua Pembayaran</h1>
-      
-      {/* Search Bar for All Payments */}
-      <div className="relative w-96 mb-8">
-        <input
-          type="text"
-          placeholder="Cari semua pembayaran..."
-          className="w-full px-4 py-2 rounded-lg border border-[#D5CEE5] focus:outline-none focus:ring-2 focus:ring-[#6D6DB0]"
-          value={allPaymentsSearchQuery}
-          onChange={(e) => setAllPaymentsSearchQuery(e.target.value)}
-        />
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          className="h-5 w-5 absolute right-3 top-2.5 text-[#6D6DB0]" 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </div>
-
-      {/* Error state for All Payments */}
-      {allPaymentsError && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
-          <p>{allPaymentsError}</p>
-          <button 
-            className="text-blue-600 underline mt-2"
-            onClick={fetchAllPaymentsData}
-          >
-            Coba lagi
-          </button>
-        </div>
-      )}
-
-      {/* Tabel Semua Pembayaran */}
-<div className="rounded-xl shadow-lg border border-indigo-200 bg-white">
-  <div className="max-h-[600px] overflow-y-auto">
-    {allPaymentsLoading ? (
-      <div className="flex justify-center items-center h-40">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-        <p className="ml-2 text-indigo-500">Memuat data pembayaran...</p>
-      </div>
-    ) : (
-      <table className="w-full">
-        <thead className="bg-blue-600 sticky top-0 z-10">
-          <tr>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">No</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Nama Peserta</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Metode Pembayaran</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Jumlah</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Tanggal</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Status</th>
-            <th className="px-6 py-4 text-left text-sm font-semibold text-white">Bukti</th>
-          </tr>
-        </thead>
-
-        <tbody className="divide-y divide-gray-200 bg-white text-gray-800">
-          {filteredAllPayments.length > 0 ? (
-            filteredAllPayments.map((payment, index) => (
-              <tr key={payment.id}>
-                <td className="px-6 py-4 text-sm">{index + 1}</td>
-                <td className="px-6 py-4 text-sm">{payment.name}</td>
-                <td className="px-6 py-4 text-sm">{formatPaymentMethod(payment.metode)}</td>
-                <td className="px-6 py-4 text-sm">
-                  Rp {payment.jumlah?.toLocaleString('id-ID') || '0'}
-                </td>
-                <td className="px-6 py-4 text-sm">
-                  {payment.tanggal ? new Date(payment.tanggal).toLocaleDateString('id-ID') : '-'}
-                </td>
-                <td className="px-6 py-4 text-sm">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    payment.status === 'sukses' ? 'bg-blue-600 text-white' :
-                    payment.status === 'menunggu' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {payment.status === 'sukses' ? 'Sukses' : 
-                     payment.status === 'menunggu' ? 'Menunggu' : 
-                     payment.status === 'gagal' ? 'Gagal' : 
-                     payment.status || 'Unknown'}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  {payment.bukti ? (
-                    <button 
-                      className="text-indigo-600 hover:text-indigo-800 text-sm underline"
-                      onClick={() => handleViewProof(payment.bukti)}
-                    >
-                      Lihat Bukti
-                    </button>
-                  ) : (
-                    <span className="text-gray-500 text-sm">Tidak ada bukti</span>
-                  )}
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
-                {allPaymentsSearchQuery 
-                  ? 'Tidak ada data yang sesuai dengan pencarian' 
-                  : 'Tidak ada data pembayaran'}
-              </td>
-            </tr>
+              </div>
+            </>
           )}
-        </tbody>
-      </table>
-    )}
-  </div>
-</div>
 
-    </div>
-  </>
-)}
+          {/* TABEL PEMBAYARAN */}
+          {activeMenu === 'Pembayaran' && (
+            <>
+              <div className="flex justify-between items-center mb-8">
+                <h1 className="text-2xl font-bold text-[#4A3A6A]">Konfirmasi Pembayaran</h1>
+                <div className="relative w-96">
+                  <input
+                    type="text"
+                    placeholder="Cari peserta..."
+                    className="w-full px-4 py-2 rounded-lg border border-[#D5CEE5] focus:outline-none focus:ring-2 focus:ring-[#6D6DB0]"
+                  />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 absolute right-3 top-2.5 text-[#6D6DB0]"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="rounded-xl shadow-lg border border-indigo-200 bg-white">
+                <div className="max-h-[600px] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="bg-indigo-500 sticky top-0">
+                      <tr className="divide-x divide-white">
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-white">Nama</th>
+                        <th className="px-6 py-4 text-left textsm font-semibold text-white">Email</th>
+                        <th className="px-6 py-4 text-left textsm font-semibold text-white">Nama Produk</th>
+                        <th className="px-6 py-4 text-left textsm font-semibold text-white">Metode Pembayaran</th>
+                        <th className="px-6 py-4 text-left textsm font-semibold text-white">Jumlah</th>
+                        <th className="px-6 py-4 text-left textsm font-semibold text-white">Tanggal</th>
+                        <th className="px-6 py-4 text-left textsm font-semibold text-white">Bukti</th>
+                        <th className="px-6 py-4 text-left textsm font-semibold text-white">Status</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-white">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pembayaran.map((bayar, idx) => {
+                        const produk = produkList.find(p => p.produk_id === bayar.produk_id);
+                        return (
+                          <tr
+                            key={bayar.pembayaran_id}
+                            className={idx % 2 === 0 ? "bg-gray-100 divide-x divide-indigo-200" : "bg-indigo-50 divide-x divide-indigo-200"}
+                          >
+                            <td className="px-6 py-4 text-sm text-[#3B2E55]">{bayar.nama_lengkap}</td>
+                            <td className="px-6 py-4 text-sm text-[#3B2E55]">{bayar.email}</td>
+                            <td className="px-6 py-4 text-sm text-[#3B2E55]">{produk?.nama_produk || '-'}</td>
+                            <td className="px-6 py-4 text-sm text-[#3B2E55]">{bayar.metode_pembayaran}</td>
+                            <td className="px-6 py-4 text-sm text-[#3B2E55]">
+                              {bayar.jumlah_pembayaran?.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-[#3B2E55]">{bayar.tanggal_pembayaran}</td>
+                            <td className="px-6 py-4">
+                              {bayar.bukti_pembayaran ? (
+                                <a
+                                  href={`/${bayar.bukti_pembayaran}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-indigo-600 underline hover:text-indigo-800"
+                                >
+                                  Lihat Bukti
+                                </a>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-[#3B2E55] capitalize">{bayar.status_konfirmasi}</td>
+                            <td className="px-6 py-4">
+                              <button className="px-3 py-1 text-xs bg-blue-500 text-white rounded-md mr-2">Terima</button>
+                              <button className="px-3 py-1 text-xs bg-red-500 text-white rounded-md">Tolak</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* TABEL PRODUK */}
+          {activeMenu === 'Produk' && (
+            <>
+              <div className="flex justify-between items-center mb-8">
+                <h1 className="text-2xl font-bold text-[#3B2E55]">Daftar Produk</h1>
+                <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">Tambah Produk</button>
+              </div>
+              <div className="rounded-xl shadow-lg border border-indigo-200 bg-white">
+                <div className="max-h-[600px] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="bg-indigo-500 sticky top-0 divide-x divide-white">
+                      <tr className="divide-x divide-white">
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-white">ID</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-white">Nama Produk</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-white">Harga</th>
+                        <th className="px-6 py-4 text-left textsm font-semibold text-white">Deskripsi</th>
+                        <th className="px-6 py-4 text-left textsm font-semibold text-white">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {produkList.map((produk, idx) => (
+                        <tr
+                          key={produk.produk_id}
+                          className={idx % 2 === 0 ? "bg-gray-100 divide-x divide-indigo-200" : "bg-indigo-50 divide-x divide-indigo-200"}
+                        >
+                          <td className="px-6 py-4 text-sm text-[#3B2E55]">{produk.produk_id}</td>
+                          <td className="px-6 py-4 text-sm text-[#3B2E55]">{produk.nama_produk}</td>
+                          <td className="px-6 py-4 text-sm text-[#3B2E55]">
+                            {produk.harga?.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-[#3B2E55]">{produk.deskripsi}</td>
+                          <td className="px-6 py-4">
+                            <button className="px-3 py-1 text-xs bg-blue-500 text-white rounded-md mr-2 hover:bg-blue-600">Edit</button>
+                            <button className="px-3 py-1 text-xs bg-red-500 text-white rounded-md hover:bg-red-600">Hapus</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ...existing menu... */}
         </main>
       </div>
     </div>
