@@ -24,31 +24,60 @@ export default function Footer() {
             achieving their great potentials”
           </p>
           <p className="text-sm leading-relaxed">
-            Cengkareng Business City IOT 12 Unit 18-19 Lt.1,<br />
-            Jalan Atang Sanjaya No.2A1, R.T.006/R.W.007, Benda, Kota<br />
-            Tangerang, Banten 15125.
+            <a
+              href="https://www.google.com/maps/place/Cengkareng+Business+City+IOT+12+Unit+18-19,+Jalan+Atang+Sanjaya+No.2A1,+Tangerang,+Banten+15125"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-gray-300 transition"
+            >
+              Cengkareng Business City IOT 12 Unit 18-19 Lt.1,<br />
+              Jalan Atang Sanjaya No.2A1, R.T.006/R.W.007, Benda, Kota<br />
+              Tangerang, Banten 15125.
+            </a>
           </p>
         </div>
 
         {/* KANAN: Kontak dan Media Sosial */}
         <div className="flex-1 flex flex-col items-center text-center mt-4 lg:mt-5">
           <h2 className="text-md font-semibold mb-3">Hubungi Kami</h2>
+          
+          {/* Email */}
           <div className="flex items-center space-x-2 mb-2">
             <img src={emailIcon} alt="Email" className="h-5 w-5" />
-            <a href="mailto:akademik@medukasi.id" className="text-sm underline">akademik@medukasi.id</a>
+            <a href="mailto:akademik@medukasi.id" className="text-sm underline">
+              akademik@medukasi.id
+            </a>
           </div>
+
+          {/* WhatsApp */}
           <div className="flex items-center space-x-2 mb-4">
             <img src={whatsappIcon} alt="WhatsApp" className="h-7 w-7" />
-            <span className="text-sm">082274152348</span>
+            <a
+              href="https://wa.me/6282274152348"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm underline"
+            >
+              082274152348
+            </a>
           </div>
+
+          {/* Media Sosial */}
           <div className="flex space-x-4">
-            <img src={twitterIcon} alt="X" className="h-5 w-5 mr-2.5" />
-            <img src={instagramIcon} alt="Instagram" className="h-8 w-8 -mt-1.5" />
-            <img src={youtubeIcon} alt="YouTube" className="h-7 w-15 -mt-1 mr-3" />
-            <img src={linkedinIcon} alt="LinkedIn" className="h-6 w-6 -mt-0.5" />
+            <a href="https://twitter.com/medukasi_id" target="_blank" rel="noopener noreferrer">
+              <img src={twitterIcon} alt="Twitter" className="h-5 w-5 mr-2.5" />
+            </a>
+            <a href="https://instagram.com/medukasi.id" target="_blank" rel="noopener noreferrer">
+              <img src={instagramIcon} alt="Instagram" className="h-8 w-8 -mt-1.5" />
+            </a>
+            <a href="https://www.youtube.com/@medukasi" target="_blank" rel="noopener noreferrer">
+              <img src={youtubeIcon} alt="YouTube" className="h-7 w-15 -mt-1 mr-3" />
+            </a>
+            <a href="https://www.linkedin.com/company/medukasi" target="_blank" rel="noopener noreferrer">
+              <img src={linkedinIcon} alt="LinkedIn" className="h-6 w-6 -mt-0.5" />
+            </a>
           </div>
         </div>
-        
       </div>
     </footer>
   );

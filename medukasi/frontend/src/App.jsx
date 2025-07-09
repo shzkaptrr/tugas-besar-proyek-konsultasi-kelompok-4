@@ -23,6 +23,7 @@ import PaymentStatus from './pages/paymentStatus';
 import UploadProof from './pages/UploadProof';
 import Pendaftaran from './pages/Pendaftaran';
 import Product from './pages/Product';
+import Testimoni from './pages/Testimoni';
 import Register from './pages/Register';
 import RegisterAdminTutor from "./pages/RegisterAdminTutor";
  
@@ -95,6 +96,7 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/product" element={<Product />} />
+        <Route path="/testimoni" element={<Testimoni />} />
 
         {/* --- Rute yang dilindungi token (menggunakan ProtectedRoute) --- */}
         {/* Kelompokkan semua rute yang dilindungi di dalam satu ProtectedRoute atau satu per satu */}

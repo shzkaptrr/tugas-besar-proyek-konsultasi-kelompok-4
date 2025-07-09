@@ -11,8 +11,7 @@ const Header = () => {
 
       <nav className="flex items-center gap-6 text-sm">
         <Link to="/" className="hover:underline">Home</Link>
-        <Link to="/product" className="hover:underline">Product</Link>
-        <Link to="#" className="hover:underline">Contacts</Link>
+        <Link to="/login" className="hover:underline">Product</Link>
         <Link to="#" className="hover:underline">Testimoni</Link>
         <Link to="/register">
         <button
